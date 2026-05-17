@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GCP 가상컴으로 RisuAI 폰 Codex 연결하기</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --text: #20232a;
+      --muted: #667085;
+      --line: #d9dee8;
+      --accent: #2563eb;
+      --accent-soft: #e8f0ff;
+      --warn: #9a3412;
+      --warn-soft: #fff3e8;
+      --ok: #166534;
+      --ok-soft: #eaf8ef;
+      --code: #111827;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, "Noto Sans KR", sans-serif;
+      line-height: 1.65;
+    }
+
+    main {
+      width: min(960px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 56px;
+    }
+
+    header {
+      padding: 28px 0 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 5vw, 44px);
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 23px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    p { margin: 0 0 12px; }
+    code { font-family: Consolas, "Courier New", monospace; }
+
+    pre {
+      margin: 10px 0 0;
+      padding: 13px 14px;
+      overflow-x: auto;
+      border-radius: 8px;
+      background: var(--code);
+      color: #eef2ff;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    section {
+      margin-top: 22px;
+      padding: 22px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+
+    li { margin: 5px 0; }
+
+    .lede {
+      max-width: 780px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .badge {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      padding: 5px 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .note,
+    .warning,
+    .success {
+      margin-top: 12px;
+      padding: 13px 14px;
+      border-radius: 8px;
+      border: 1px solid;
+    }
+
+    .note {
+      background: var(--accent-soft);
+      border-color: #bfd3ff;
+    }
+
+    .warning {
+      background: var(--warn-soft);
+      border-color: #fed7aa;
+      color: var(--warn);
+    }
+
+    .success {
+      background: var(--ok-soft);
+      border-color: #bbf7d0;
+      color: var(--ok);
+    }
+
+    .quick-start {
+      margin-top: 22px;
+      padding: 24px;
+      background: #0f172a;
+      border-radius: 12px;
+      color: #e2e8f0;
+    }
+
+    .quick-start h2 {
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .quick-start p {
+      color: #94a3b8;
+      margin-bottom: 16px;
+      font-size: 15px;
+    }
+
+    .copy-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 10px;
+    }
+
+    .copy-block code {
+      flex: 1;
+      color: #7dd3fc;
+      font-size: 14px;
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .copy-btn.copied { background: #16a34a; }
+
+    .flow {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .flow-step {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcff;
+      font-weight: 700;
+    }
+
+    .settings-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .settings-table th,
+    .settings-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .settings-table th {
+      width: 220px;
+      background: #f1f4f9;
+    }
+
+    .settings-table tr:last-child th,
+    .settings-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    footer {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 760px) {
+      main {
+        width: min(100% - 22px, 960px);
+        padding-top: 18px;
+      }
+
+      header { padding-top: 14px; }
+      section { padding: 16px; }
+
+      .copy-block {
+        display: grid;
+        gap: 10px;
+      }
+
+      .settings-table,
+      .settings-table tbody,
+      .settings-table tr,
+      .settings-table th,
+      .settings-table td {
+        display: block;
+        width: 100%;
+      }
+
+      .settings-table th { border-bottom: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>GCP 가상컴으로 RisuAI 폰 Codex 연결하기</h1>
+      <p class="lede">
+        노트북을 켜두지 않고도 iPhone이나 Galaxy의 RisuAI에서 자기 ChatGPT/Codex 계정을 쓰기 위한 가이드입니다.
+        Google Cloud VM에 작은 서버를 켜고, 폰 RisuAI는 그 서버 주소로 접속합니다.
+      </p>
+      <div class="badge-row">
+        <span class="badge">GCP VM</span>
+        <span class="badge">Ubuntu</span>
+        <span class="badge">iPhone / Galaxy</span>
+        <span class="badge">RisuAI</span>
+        <span class="badge">ChatGPT/Codex</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>먼저 읽기</h2>
+      <div class="warning">
+        이 방식은 각자 자기 Google Cloud VM과 자기 ChatGPT/Codex 계정을 쓰는 방식입니다.
+        다른 사람에게 내 서버 주소와 비밀번호를 주면 그 사람이 내 ChatGPT/Codex 계정을 쓰게 됩니다.
+      </div>
+      <ul>
+        <li>노트북을 꺼도 됩니다. 대신 GCP VM은 켜져 있어야 합니다.</li>
+        <li>GCP는 무료 크레딧이나 무료 티어를 쓸 수 있지만, 설정에 따라 과금될 수 있습니다.</li>
+        <li>처음에는 Response streaming을 끄고 테스트하는 것을 추천합니다.</li>
+        <li>iPhone과 Galaxy 모두 같은 방식으로 쓸 수 있습니다.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>전체 구조</h2>
+      <p>폰 RisuAI가 GCP VM에 열린 HTTPS 주소로 접속하고, VM 안의 clawgate가 ChatGPT/Codex 계정으로 요청을 넘깁니다.</p>
+      <div class="flow">
+        <div class="flow-step">1. iPhone / Galaxy RisuAI</div>
+        <div class="flow-step">2. https://...trycloudflare.com</div>
+        <div class="flow-step">3. GCP Ubuntu VM</div>
+        <div class="flow-step">4. clawgate</div>
+        <div class="flow-step">5. 내 ChatGPT/Codex 계정</div>
+      </div>
+    </section>
+
+    <div class="quick-start">
+      <h2>필요한 파일</h2>
+      <p>GCP VM에 업로드할 파일은 이것 하나입니다. GitHub에서 이 파일을 내려받아 VM의 SSH 창에 업로드하세요.</p>
+      <div class="copy-block">
+        <code id="zip-name">for_linux_codex.zip</code>
+        <button class="copy-btn" onclick="copyText('zip-name', this)">복사</button>
+      </div>
+    </div>
+
+    <section>
+      <h2>1. GCP VM 만들기</h2>
+      <p>Google Cloud Console에서 Compute Engine VM 인스턴스를 만듭니다. 처음이면 아래 순서대로 누르면 됩니다.</p>
+      <h3>1-1. Compute Engine으로 이동</h3>
+      <ul>
+        <li>Google Cloud Console을 엽니다.</li>
+        <li>왼쪽 메뉴에서 <strong>Compute Engine</strong>을 찾습니다.</li>
+        <li><strong>VM 인스턴스</strong>로 들어갑니다.</li>
+        <li><strong>인스턴스 만들기</strong> 또는 <strong>Create instance</strong> 버튼을 누릅니다.</li>
+      </ul>
+
+      <h3>1-2. 기본 정보 설정</h3>
+      <ul>
+        <li>이름은 아무거나 정해도 됩니다. 예: <code>risu-codex-phone</code></li>
+        <li>리전은 무료 티어를 노리면 <code>us-central1</code> 같은 무료 티어 대상 리전을 고릅니다.</li>
+        <li>머신 유형 또는 머신 타입에서 <code>e2-micro</code>를 고릅니다.</li>
+      </ul>
+
+      <h3>1-3. OS와 디스크 설정</h3>
+      <ul>
+        <li><strong>OS 및 스토리지</strong> 또는 <strong>Boot disk</strong>에서 <strong>변경</strong>을 누릅니다.</li>
+        <li>운영체제는 <code>Ubuntu</code>를 고릅니다.</li>
+        <li>버전은 <code>Ubuntu LTS</code>를 고릅니다. Minimal 버전이 따로 보이면 일반 LTS 쪽을 고르는 것을 추천합니다.</li>
+        <li>부팅 디스크 유형은 <strong>표준 영구 디스크</strong>를 권장합니다.</li>
+        <li>디스크 크기는 큰 용량이 필요 없습니다. 무료 티어를 노리면 30GB 이하를 권장합니다.</li>
+      </ul>
+
+      <h3>1-4. 네트워크와 생성</h3>
+      <ul>
+        <li>이 패키지는 Cloudflare 터널을 쓰므로, 보통 HTTP/HTTPS 방화벽 체크를 따로 켤 필요는 없습니다.</li>
+        <li>설정이 끝나면 <strong>만들기</strong> 또는 <strong>Create</strong>를 누릅니다.</li>
+        <li>잠시 기다리면 VM 인스턴스 목록에 새 서버가 생깁니다.</li>
+        <li>서버가 만들어지면 같은 줄의 <strong>SSH</strong> 버튼을 눌러 접속합니다.</li>
+      </ul>
+      <div class="note">
+        예상 과금액이 보일 수 있습니다. 무료 크레딧/무료 티어 적용 여부는 계정 상태와 설정에 따라 다르니 GCP 예산 알림을 켜두세요.
+      </div>
+      <div class="success">
+        사진을 넣는다면 이 섹션에 4장이 있으면 충분합니다: VM 인스턴스 만들기 버튼, e2-micro 선택, Ubuntu 부팅 디스크 선택, SSH 버튼 위치.
+      </div>
+    </section>
+
+    <section>
+      <h2>2. SSH 열고 zip 업로드</h2>
+      <p>VM이 만들어지면 GCP 화면에서 <strong>SSH</strong> 버튼을 누릅니다. SSH 창이 열리면 오른쪽 위의 <strong>파일 업로드</strong>로 <code>for_linux_codex.zip</code>을 올립니다.</p>
+    </section>
+
+    <section>
+      <h2>3. 압축 풀기</h2>
+      <p>SSH 창에 아래 명령어를 통째로 복사해서 붙여넣고 Enter를 누르세요.</p>
+      <pre><code>sudo apt update
+sudo apt install -y unzip
+unzip for_linux_codex.zip
+cd for_linux_codex</code></pre>
+    </section>
+
+    <section>
+      <h2>4. 설치하기</h2>
+      <p>아래 명령어를 SSH 창에 붙여넣고 Enter를 누르세요.</p>
+      <pre><code>bash setup_user.sh
+source ./env.sh</code></pre>
+      <div class="note">
+        설치 중 시간이 조금 걸릴 수 있습니다. 완료되면 다음 단계로 갑니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>5. ChatGPT/Codex 로그인</h2>
+      <p>아래 명령어를 실행합니다.</p>
+      <pre><code>bash login.sh</code></pre>
+      <p>SSH 창에 긴 주소가 뜨면 그 주소를 브라우저로 열고, 자기 ChatGPT/Codex 계정으로 로그인하세요. 끝나면 다시 SSH 창으로 돌아옵니다.</p>
+    </section>
+
+    <section>
+      <h2>6. 서버 켜기</h2>
+      <p>아래 명령어를 실행합니다.</p>
+      <pre><code>bash start_detached.sh</code></pre>
+      <p><code>Risu API password:</code>가 나오면 RisuAI에 넣을 비밀번호를 직접 정해서 입력하세요.</p>
+      <div class="note">
+        비밀번호를 입력할 때 화면에 글자가 안 보이는 것은 정상입니다. 입력하고 Enter를 누르면 됩니다.
+      </div>
+    </section>
+
+    <section>
+      <h2>7. 나온 주소 복사</h2>
+      <p>성공하면 이런 정보가 나옵니다.</p>
+      <pre><code>base_url=https://어쩌구.trycloudflare.com
+api_password=내가_방금_만든_비밀번호
+format=Anthropic Claude
+model=claude-3-opus</code></pre>
+      <p>폰 RisuAI에 넣을 것은 <code>base_url</code>과 <code>api_password</code>입니다.</p>
+    </section>
+
+    <section>
+      <h2>8. 폰 RisuAI 설정</h2>
+      <table class="settings-table">
+        <tbody>
+          <tr><th>URL</th><td><code>base_url</code>에 나온 https 주소</td></tr>
+          <tr><th>API password</th><td><code>api_password</code> 값</td></tr>
+          <tr><th>요청 모델</th><td><code>claude-3-opus</code></td></tr>
+          <tr><th>형식</th><td><code>Anthropic Claude</code></td></tr>
+          <tr><th>Tokenizer</th><td><code>Claude</code></td></tr>
+          <tr><th>Response streaming</th><td>처음 테스트할 때는 끄기</td></tr>
+          <tr><th>Autofill Request URL</th><td>끄기</td></tr>
+        </tbody>
+      </table>
+      <div class="success">
+        먼저 <code>안녕</code>처럼 짧은 메시지로 테스트하세요.
+      </div>
+    </section>
+
+    <section>
+      <h2>다시 켤 때</h2>
+      <p>서버 주소가 죽었거나 VM을 다시 켰다면 SSH에서 아래만 다시 실행합니다.</p>
+      <pre><code>cd for_linux_codex
+source ./env.sh
+bash start_detached.sh</code></pre>
+    </section>
+
+    <section>
+      <h2>서버 끄기</h2>
+      <pre><code>cd for_linux_codex
+bash stop.sh</code></pre>
+    </section>
+
+    <section>
+      <h2>자주 나는 문제</h2>
+      <h3>폰에서 401 오류</h3>
+      <p>RisuAI의 API password가 틀렸을 가능성이 큽니다. <code>connection-info.txt</code> 또는 실행 결과에 나온 비밀번호를 다시 확인하세요.</p>
+      <h3>1016 또는 DNS 오류</h3>
+      <p>Cloudflare 임시 주소가 죽은 상태입니다. SSH에서 <code>bash start_detached.sh</code>를 다시 실행해서 새 주소를 받으세요.</p>
+      <h3>로그인이 풀림</h3>
+      <p><code>bash login.sh</code>를 다시 실행해서 ChatGPT/Codex 계정으로 다시 로그인합니다.</p>
+    </section>
+
+    <footer>
+      개인 테스트용 가이드입니다. 계정 공유, 재판매, 공개 프록시 운영 용도로 사용하지 마세요.
+    </footer>
+  </main>
+  <script>
+    function copyText(id, btn) {
+      const text = document.getElementById(id).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = "복사됨";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = "복사";
+          btn.classList.remove("copied");
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
